@@ -55,7 +55,7 @@ class AnalysisPanel(BasePanel):
     
         # Кнопка установки
         tk.Button(
-            frame,
+            state_frame,
             text="Установить",
             command=self._set_initial_state,
             bg='#2196F3',
@@ -64,7 +64,7 @@ class AnalysisPanel(BasePanel):
             cursor="hand2",
             padx=10,
             pady=3
-        ).pack(pady=5)
+        ).pack(side="left", padx=5) 
         
         self.current_label = tk.Label(
             frame,
