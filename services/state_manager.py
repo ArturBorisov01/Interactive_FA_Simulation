@@ -114,7 +114,6 @@ class StateManager:
         """
         removed = self.automaton.remove_state(state)
         if removed:
-            self.live_processor.reset()
             self.notify('state_removed', state)
         return removed
 

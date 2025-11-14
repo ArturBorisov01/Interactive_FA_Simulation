@@ -180,14 +180,26 @@ class AnalysisPanel(BasePanel):
             font=("Arial", 9, "bold")
         ).pack(anchor="w", pady=(10, 2))
 
-        self.result_text = scrolledtext.ScrolledText(
+        # self.result_text = scrolledtext.ScrolledText(
+        #     frame,
+        #     height=4,
+        #     font=self.word_entry.cget("font"),
+        #     wrap=tk.WORD,
+        #     state='disabled'
+        # )
+        # self.result_text.pack(fill="both", expand=True)
+
+        self.result_text = tk.Text(
             frame,
-            height=4,
+            height=1,
             font=self.word_entry.cget("font"),
-            wrap=tk.WORD,
-            state='disabled'
+            wrap=tk.NONE,
+            state='disabled',
+            borderwidth=self.word_entry.cget("borderwidth"),
+            relief=self.word_entry.cget("relief"),
+            highlightthickness=self.word_entry.cget("highlightthickness")
         )
-        self.result_text.pack(fill="both", expand=True)
+        self.result_text.pack(fill="x")
 
 
 
@@ -327,24 +339,22 @@ class AnalysisPanel(BasePanel):
             text=f"w[{pointer}/{length}], q={current_state}{extra}"
         )
 
-        lines = []
         output_chars = []
         for step in history:
-            out_symbol = step.output_symbol if step.output_symbol is not None else '∅'
-            lines.append(f"{step.step_number}. A={step.input_symbol} → B={out_symbol}")
             if step.output_symbol:
                 output_chars.append(step.output_symbol)
 
-        result_body = "\n".join(lines)
+        result_text = ""
         if output_chars:
-            result_body += f"\n\nСформированное слово B: {''.join(output_chars)}"
-        elif not lines:
-            result_body = "Результат: —"
+            result_text += "".join(output_chars)
+        else:
+            result_text += "—"
 
         self.result_text.config(state='normal')
         self.result_text.delete(1.0, tk.END)
-        self.result_text.insert(1.0, result_body)
+        self.result_text.insert(1.0, result_text)
         self.result_text.config(state='disabled')
+
 
 
 
