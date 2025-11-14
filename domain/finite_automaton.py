@@ -137,3 +137,19 @@ class MooreAutomaton:
         
         self.initial_state = state
         self.current_state = state
+
+    def remove_state(self, state):
+        """Удаляет состояние и все связанные с ним переходы."""
+        if state not in self.states:
+            return False
+        self.states.remove(state)
+        self.outputs.pop(state, None)
+        self.transitions = [
+            t for t in self.transitions
+            if t.from_state != state and t.to_state != state
+        ]
+        if self.initial_state == state:
+            self.initial_state = None
+        if self.current_state == state:
+            self.current_state = None
+        return True

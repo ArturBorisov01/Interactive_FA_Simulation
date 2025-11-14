@@ -71,6 +71,7 @@ class EdgePanel(BasePanel):
             entry.grid(row=1, column=col, padx=5, pady=5)
             setattr(self, attr_name, entry)
         
+        
         # Кнопка добавления
         add_button = tk.Button(
             input_frame,
@@ -95,28 +96,41 @@ class EdgePanel(BasePanel):
             padx=10,
             pady=10
         )
-        list_frame.pack(padx=10, pady=10, fill="both", expand=True)
+        # list_frame.pack(padx=10, pady=10, fill="both", expand=True)
+        list_frame.pack(padx=10, pady=10, fill="x")
+
         
         scrollbar = tk.Scrollbar(list_frame)
         scrollbar.pack(side="right", fill="y")
         
+       
+       
+
+
         self.listbox = tk.Listbox(
             list_frame,
             font=("Courier", 10),
+            height=10,
             yscrollcommand=scrollbar.set,
             selectmode=tk.SINGLE
         )
-        self.listbox.pack(fill="both", expand=True)
+
+
+        self.listbox.pack(fill="x")  # было fill="both", expand=True
         scrollbar.config(command=self.listbox.yview)
     
     def _create_control_buttons(self):
         """Создать кнопки управления"""
         button_frame = tk.Frame(self, bg='#f0f0f0')
-        button_frame.pack(pady=10)
+        button_frame.pack(pady=10, fill="x")
+        
+        # блок кнопок удаления и очистки
+        buttons_row = tk.Frame(button_frame, bg='#f0f0f0')
+        buttons_row.pack(fill="x")
         
         tk.Button(
-            button_frame,
-            text="🗑️ Удалить",
+            buttons_row,
+            text="🗑️ Удалить ребро",
             command=self._delete_selected,
             bg='#f44336',
             fg='white',
@@ -124,11 +138,11 @@ class EdgePanel(BasePanel):
             cursor="hand2",
             padx=10,
             pady=5
-        ).pack(side="left", padx=5)
+        ).pack(side="left", expand=True, fill="x", padx=5)
         
         tk.Button(
-            button_frame,
-            text="🗑️ Очистить всё",
+            buttons_row,
+            text="Очистить всё!",
             command=self._clear_all,
             bg='#FF9800',
             fg='white',
@@ -136,7 +150,47 @@ class EdgePanel(BasePanel):
             cursor="hand2",
             padx=10,
             pady=5
-        ).pack(side="left", padx=5)
+        ).pack(side="left", expand=True, fill="x", padx=5)
+
+        remove_state_frame = tk.Frame(button_frame, bg='#f0f0f0')
+        remove_state_frame.pack(fill="x", pady=(10, 0))
+
+       # --- новая рамка для удаления вершины ---
+        remove_state_frame = tk.LabelFrame(
+            button_frame,
+            text="Удаление вершины",
+            font=("Arial", 10, "bold"),
+            bg='#f0f0f0',
+            padx=10,
+            pady=10
+        )
+        remove_state_frame.pack(fill="x", padx=10, pady=(10, 0)) 
+
+        row = tk.Frame(remove_state_frame, bg='#f0f0f0')
+        row.pack(fill="x")
+
+        tk.Label(
+            row,
+            text="q:",
+            bg='#f0f0f0',
+            font=("Arial", 9)
+        ).grid(row=0, column=0, sticky="w")
+
+        self.state_remove_entry = tk.Entry(row, width=6, font=("Arial", 10))
+        self.state_remove_entry.grid(row=0, column=1, padx=5)
+
+        tk.Button(
+            row,
+            text="Удалить q",
+            command=lambda: self._remove_state(self.state_remove_entry.get().strip()),
+            bg='#9C27B0',
+            fg='white',
+            font=("Arial", 9, "bold"),
+            cursor="hand2",
+            padx=10,
+            pady=3
+        ).grid(row=0, column=2, padx=5)
+
     
     # === ОБРАБОТЧИКИ СОБЫТИЙ ===
     
@@ -189,6 +243,7 @@ class EdgePanel(BasePanel):
         self._refresh_list()
     
     def _refresh_list(self):
+
         """Обновить список рёбер (ИСПРАВЛЕНО)"""
         self.listbox.delete(0, tk.END)
         
@@ -211,3 +266,12 @@ class EdgePanel(BasePanel):
         self.counter_label.config(
             text=f"Рёбер: {info['transitions_count']} | Узлов: {len(info['states'])}"
         )   
+
+    def _remove_state(self, state: str):
+        if not state:
+            messagebox.showwarning("Ошибка", "Укажите состояние для удаления.")
+            return
+        if not self.state_manager.remove_state(state):
+            messagebox.showwarning("Ошибка", f"Состояние {state} не найдено.")
+            return
+        self.state_remove_entry.delete(0, tk.END)

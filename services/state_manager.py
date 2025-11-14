@@ -8,6 +8,7 @@
 
 from typing import Any, Callable
 from domain.finite_automaton import MooreAutomaton
+from services.live_edit_processor import LiveEditProcessor
 
 
 class StateManager:
@@ -23,6 +24,7 @@ class StateManager:
         """
         self.automaton = automaton
         self._observers = []
+        self.live_processor = LiveEditProcessor(automaton)
     
     def subscribe(self, observer: Any) -> None:
         """
@@ -104,9 +106,23 @@ class StateManager:
             self.notify('transition_removed', {'index': index, 'transition': removed})
         return removed
     
+    def remove_state(self, state: str) -> bool:
+        """
+        Удаляет состояние вместе со связанными переходами и сбрасывает live-режим.
+        Returns:
+            bool: True, если состояние существовало и было удалено.
+        """
+        removed = self.automaton.remove_state(state)
+        if removed:
+            self.live_processor.reset()
+            self.notify('state_removed', state)
+        return removed
+
+    
     def clear_all(self) -> None:
         """Очистить всё с уведомлением"""
         self.automaton.clear_transitions()
+        self.live_processor.reset()
         self.notify('cleared')
     
     def set_initial_state(self, state: str) -> None:
@@ -169,7 +185,8 @@ class StateManager:
             ("1", "0", "1", "2"),
             ("2", "1", "1", "3"),
             ("2", "0", "1", "2"),
-            ("3", "1", "1", "1")
+            ("3", "1", "1", "1"),
+            ("3", "0", "1", "3")
         ]
         for from_state, input_sym, output_sym, to_state in default_edges:
             self.add_transition(from_state, input_sym, output_sym, to_state)
@@ -177,3 +194,17 @@ class StateManager:
             self.set_initial_state("1")
         except ValueError:
             pass
+
+    def start_live_edit(self, word: str) -> dict:
+        status = self.live_processor.start(word)
+        self.notify('live_edit_started', status)
+        return status
+
+    def advance_live_edit(self) -> dict:
+        status = self.live_processor.step()
+        self.notify('live_edit_step', status)
+        return status
+
+    def reset_live_edit(self) -> None:
+        self.live_processor.reset()
+        self.notify('live_edit_reset')

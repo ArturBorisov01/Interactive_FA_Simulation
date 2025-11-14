@@ -151,6 +151,62 @@ class AnalysisPanel(BasePanel):
             highlightthickness=self.word_entry.cget("highlightthickness")
         )
         self.result_text.pack(fill="x")
+        
+        live_frame = tk.LabelFrame(
+            frame,
+            text="Live-Edit режим",
+            font=("Arial", 9, "bold"),
+            bg='#f0f0f0',
+            padx=10,
+            pady=5
+        )
+        live_frame.pack(fill="x", pady=(10,0))
+
+        tk.Button(
+            live_frame,
+            text="Старт Live-Edit",
+            command=self._start_live_edit,
+            bg='#3F51B5',
+            fg='white',
+            font=("Arial", 9, "bold"),
+            cursor="hand2",
+            padx=10,
+            pady=3
+        ).pack(fill="x", pady=2)
+
+        tk.Button(
+            live_frame,
+            text="Следующий символ",
+            command=self._live_step,
+            bg='#009688',
+            fg='white',
+            font=("Arial", 9, "bold"),
+            cursor="hand2",
+            padx=10,
+            pady=3
+        ).pack(fill="x", pady=2)
+
+        tk.Button(
+            live_frame,
+            text="Сбросить Live-Edit",
+            command=self._reset_live,
+            bg='#795548',
+            fg='white',
+            font=("Arial", 9, "bold"),
+            cursor="hand2",
+            padx=10,
+            pady=3
+        ).pack(fill="x", pady=2)
+
+        self.live_status_label = tk.Label(
+            live_frame,
+            text="Live-Edit: ожидание запуска",
+            bg='#f0f0f0',
+            font=("Arial", 9),
+            anchor="w"
+        )
+        self.live_status_label.pack(fill="x", pady=(5,0))
+
 
     
     # === ОБРАБОТЧИКИ СОБЫТИЙ ===
@@ -178,7 +234,8 @@ class AnalysisPanel(BasePanel):
 
         try:
             self.state_manager.set_initial_state(state)
-            messagebox.showinfo("Успех", f"Начальное состояние: q0={state}")
+            # всплывающее окно отключено для лучшего UX
+            # messagebox.showinfo("Успех", f"Начальное состояние: q0={state}")
         except ValueError as e:
             messagebox.showerror("Ошибка", str(e))
     
@@ -214,6 +271,43 @@ class AnalysisPanel(BasePanel):
         self.result_text.insert(1.0, formatted)
         self.result_text.config(state='disabled')
     
+    def _start_live_edit(self):
+        word = self.word_entry.get().strip()
+        try:
+            status = self.state_manager.start_live_edit(word)
+        except ValueError as exc:
+            messagebox.showerror("Live-Edit", str(exc))
+            return
+        self._render_live_status(status)
+
+    def _live_step(self):
+        try:
+            status = self.state_manager.advance_live_edit()
+        except ValueError as exc:
+            messagebox.showerror("Live-Edit", str(exc))
+            return
+        self._render_live_status(status)
+        if status['finished']:
+            messagebox.showinfo("Live-Edit", "Слово полностью обработано.")
+
+    def _reset_live(self):
+        self.state_manager.reset_live_edit()
+        self.live_status_label.config(text="Live-Edit: ожидание запуска")
+
+    def _render_live_status(self, status: dict):
+        history = status.get('history', [])
+        pointer = status.get('pointer', 0)
+        length = len(status.get('word', ""))
+        current_state = status.get('current_state', '∅')
+        last = status.get('last_step')
+        extra = ""
+        if last:
+            extra = f" | δ({last.current_state}, {last.input_symbol}) = {last.next_state} / {last.output_symbol}"
+        self.live_status_label.config(
+            text=f"w[{pointer}/{length}], q={current_state}{extra}"
+        )
+
+
     def on_state_changed(self, event_type: str, data=None):
         """Обновить отображение при изменении состояния"""
         # Обновляем комбобоксы состояний
