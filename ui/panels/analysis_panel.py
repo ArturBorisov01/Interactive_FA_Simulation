@@ -140,11 +140,18 @@ class AnalysisPanel(BasePanel):
         tk.Label(frame, text="Результат:", bg='#f0f0f0',
                 font=("Arial", 9, "bold")).pack(anchor="w", pady=(10, 2))
         
-        self.result_text = scrolledtext.ScrolledText(
-            frame, height=8, font=("Courier", 9),
-            wrap=tk.WORD, state='disabled'
+        self.result_text = tk.Text(
+            frame,
+            height=1,
+            font=self.word_entry.cget("font"),
+            wrap=tk.NONE,
+            state='disabled',
+            borderwidth=self.word_entry.cget("borderwidth"),
+            relief=self.word_entry.cget("relief"),
+            highlightthickness=self.word_entry.cget("highlightthickness")
         )
-        self.result_text.pack(fill="both", expand=True)
+        self.result_text.pack(fill="x")
+
     
     # === ОБРАБОТЧИКИ СОБЫТИЙ ===
     
