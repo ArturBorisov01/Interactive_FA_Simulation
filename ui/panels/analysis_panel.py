@@ -125,87 +125,70 @@ class AnalysisPanel(BasePanel):
         self.word_entry = tk.Entry(frame, font=("Arial", 10))
         self.word_entry.pack(fill="x", pady=(0, 10))
         
-        tk.Button(
-            frame,
-            text="▶ Обработать",
-            command=self._process_word,
-            bg='#4CAF50',
-            fg='white',
-            font=("Arial", 10, "bold"),
-            cursor="hand2",
-            padx=20,
-            pady=5
-        ).pack(pady=5)
-        
-        tk.Label(frame, text="Результат:", bg='#f0f0f0',
-                font=("Arial", 9, "bold")).pack(anchor="w", pady=(10, 2))
-        
-        self.result_text = tk.Text(
-            frame,
-            height=1,
-            font=self.word_entry.cget("font"),
-            wrap=tk.NONE,
-            state='disabled',
-            borderwidth=self.word_entry.cget("borderwidth"),
-            relief=self.word_entry.cget("relief"),
-            highlightthickness=self.word_entry.cget("highlightthickness")
-        )
-        self.result_text.pack(fill="x")
-        
-        live_frame = tk.LabelFrame(
-            frame,
-            text="Live-Edit режим",
-            font=("Arial", 9, "bold"),
-            bg='#f0f0f0',
-            padx=10,
-            pady=5
-        )
-        live_frame.pack(fill="x", pady=(10,0))
+        controls = tk.Frame(frame, bg='#f0f0f0')
+        controls.pack(fill="x", pady=(0, 10))
 
         tk.Button(
-            live_frame,
-            text="Старт Live-Edit",
+            controls,
+            text="Пуск",
             command=self._start_live_edit,
             bg='#3F51B5',
             fg='white',
-            font=("Arial", 9, "bold"),
+            font=("Arial", 10, "bold"),
             cursor="hand2",
             padx=10,
-            pady=3
-        ).pack(fill="x", pady=2)
+            pady=4
+        ).pack(side="left", expand=True, fill="x", padx=3)
 
         tk.Button(
-            live_frame,
+            controls,
             text="Следующий символ",
             command=self._live_step,
             bg='#009688',
             fg='white',
-            font=("Arial", 9, "bold"),
+            font=("Arial", 10, "bold"),
             cursor="hand2",
             padx=10,
-            pady=3
-        ).pack(fill="x", pady=2)
+            pady=4
+        ).pack(side="left", expand=True, fill="x", padx=3)
 
         tk.Button(
-            live_frame,
-            text="Сбросить Live-Edit",
+            controls,
+            text="Стоп",
             command=self._reset_live,
             bg='#795548',
             fg='white',
-            font=("Arial", 9, "bold"),
+            font=("Arial", 10, "bold"),
             cursor="hand2",
             padx=10,
-            pady=3
-        ).pack(fill="x", pady=2)
+            pady=4
+        ).pack(side="left", expand=True, fill="x", padx=3)
 
         self.live_status_label = tk.Label(
-            live_frame,
+            frame,
             text="Live-Edit: ожидание запуска",
             bg='#f0f0f0',
             font=("Arial", 9),
             anchor="w"
         )
-        self.live_status_label.pack(fill="x", pady=(5,0))
+        self.live_status_label.pack(fill="x", pady=(5, 0))
+
+        tk.Label(
+            frame,
+            text="Результат:",
+            bg='#f0f0f0',
+            font=("Arial", 9, "bold")
+        ).pack(anchor="w", pady=(10, 2))
+
+        self.result_text = scrolledtext.ScrolledText(
+            frame,
+            height=4,
+            font=self.word_entry.cget("font"),
+            wrap=tk.WORD,
+            state='disabled'
+        )
+        self.result_text.pack(fill="both", expand=True)
+
 
 
     
@@ -271,8 +254,35 @@ class AnalysisPanel(BasePanel):
         self.result_text.insert(1.0, formatted)
         self.result_text.config(state='disabled')
     
+    def _clear_result_output(self):
+        """Очищает текстовое поле 'Результат'."""
+        self.result_text.config(state='normal')
+        self.result_text.delete(1.0, tk.END)
+        self.result_text.config(state='disabled')
+
+
     def _start_live_edit(self):
         word = self.word_entry.get().strip()
+        if not word:
+            messagebox.showwarning("Live-Edit", "Введите входное слово из алфавита A.")
+            return
+
+        if not self.state_manager.automaton.get_initial_state():
+            messagebox.showwarning("Live-Edit", "Сначала задайте начальное состояние q0.")
+            return
+
+        alphabet = self.state_manager.automaton.get_input_alphabet()
+        if not alphabet:
+            messagebox.showwarning("Live-Edit", "Автомат не содержит переходов. Добавьте рёбра перед запуском.")
+            return
+
+        if any(ch not in alphabet for ch in word):
+            messagebox.showwarning(
+                "Live-Edit",
+                f"Слово содержит символы вне алфавита A = {{ {', '.join(alphabet)} }}.")
+            return
+
+        self._clear_result_output()
         try:
             status = self.state_manager.start_live_edit(word)
         except ValueError as exc:
@@ -280,7 +290,15 @@ class AnalysisPanel(BasePanel):
             return
         self._render_live_status(status)
 
+
     def _live_step(self):
+        if not self.state_manager.automaton.is_complete():
+            messagebox.showerror(
+                "Live-Edit",
+                "Невозможно обработать следующий символ: автомат не полный."
+            )
+            return
+        
         try:
             status = self.state_manager.advance_live_edit()
         except ValueError as exc:
@@ -292,6 +310,7 @@ class AnalysisPanel(BasePanel):
 
     def _reset_live(self):
         self.state_manager.reset_live_edit()
+        self._clear_result_output()
         self.live_status_label.config(text="Live-Edit: ожидание запуска")
 
     def _render_live_status(self, status: dict):
@@ -300,12 +319,33 @@ class AnalysisPanel(BasePanel):
         length = len(status.get('word', ""))
         current_state = status.get('current_state', '∅')
         last = status.get('last_step')
+
         extra = ""
         if last:
             extra = f" | δ({last.current_state}, {last.input_symbol}) = {last.next_state} / {last.output_symbol}"
         self.live_status_label.config(
             text=f"w[{pointer}/{length}], q={current_state}{extra}"
         )
+
+        lines = []
+        output_chars = []
+        for step in history:
+            out_symbol = step.output_symbol if step.output_symbol is not None else '∅'
+            lines.append(f"{step.step_number}. A={step.input_symbol} → B={out_symbol}")
+            if step.output_symbol:
+                output_chars.append(step.output_symbol)
+
+        result_body = "\n".join(lines)
+        if output_chars:
+            result_body += f"\n\nСформированное слово B: {''.join(output_chars)}"
+        elif not lines:
+            result_body = "Результат: —"
+
+        self.result_text.config(state='normal')
+        self.result_text.delete(1.0, tk.END)
+        self.result_text.insert(1.0, result_body)
+        self.result_text.config(state='disabled')
+
 
 
     def on_state_changed(self, event_type: str, data=None):
