@@ -158,3 +158,22 @@ class StateManager:
                 pass  # Игнорируем если состояние невалидно
         
         self.notify('state_restored', snapshot)
+
+    # services/state_manager.py:118
+    def create_default_graph(self) -> None:
+        """Автозаполнение автомата базовым графом при запуске."""
+        if self.automaton.get_transitions():
+            return
+        default_edges = [
+            ("1", "1", "1", "1"),
+            ("1", "0", "1", "2"),
+            ("2", "1", "1", "3"),
+            ("2", "0", "1", "2"),
+            ("3", "1", "1", "1")
+        ]
+        for from_state, input_sym, output_sym, to_state in default_edges:
+            self.add_transition(from_state, input_sym, output_sym, to_state)
+        try:
+            self.set_initial_state("1")
+        except ValueError:
+            pass

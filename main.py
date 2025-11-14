@@ -20,7 +20,10 @@ def main():
     
     # Создаём UI и передаём зависимости
     app = MainWindow(root, state_manager, service)
-    
+
+    # Инициализируем автомат с дефолтным графом
+    state_manager.create_default_graph()
+
     # Запускаем главный цикл
     root.mainloop()
 

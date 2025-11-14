@@ -190,6 +190,14 @@ class AnalysisPanel(BasePanel):
             messagebox.showwarning("Ошибка", "Введите входное слово!")
             return
         
+        # NEW: make sure the automaton is deterministic before processing
+        if not self.state_manager.automaton.is_complete():
+            messagebox.showerror(
+                "Недетерминированный автомат",
+                "Нельзя обработать слово: автомат не является полным!"
+            )
+            return
+        
         if not self.state_manager.automaton.get_initial_state():
             messagebox.showwarning("Ошибка", "Сначала установите начальное состояние!")
             return
