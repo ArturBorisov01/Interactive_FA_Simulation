@@ -33,6 +33,8 @@ class VisualizationPanel(BasePanel):
         
         # Объект для рисования
         self.graph_canvas = GraphCanvas(self.canvas, 500, 500)
+        self._highlight_nodes = set()
+        self._highlight_edges = set()
         
         # Обработчик изменения размера
         self.canvas.bind('<Configure>', self._on_resize)
@@ -47,9 +49,28 @@ class VisualizationPanel(BasePanel):
         self._refresh_graph()
     
     def on_state_changed(self, event_type: str, data=None):
-        """Перерисовать граф при изменении состояния"""
+        """React to automaton state changes and refresh highlights."""
+        if event_type == 'live_edit_started' and isinstance(data, dict):
+            # nothing processed yet; clear highlight until first step arrives
+            self._highlight_nodes = set()
+            self._highlight_edges = set()
+        elif event_type == 'live_edit_step' and isinstance(data, dict):
+            step = data.get('last_step')
+            self._highlight_nodes = set()
+            self._highlight_edges = set()
+            if step is not None:
+                target_state = getattr(step, 'next_state', None)
+                if target_state:
+                    self._highlight_nodes.add(target_state)
+                cur = getattr(step, 'current_state', None)
+                symbol = getattr(step, 'input_symbol', None)
+                if cur and symbol and target_state:
+                    self._highlight_edges.add((cur, symbol, target_state))
+        elif event_type in ('live_edit_reset', 'cleared'):
+            self._highlight_nodes.clear()
+            self._highlight_edges.clear()
         self._refresh_graph()
-    
+
     def _refresh_graph(self):
         """Обновить визуализацию (ИСПРАВЛЕНО)"""
         automaton = self.state_manager.automaton
@@ -69,4 +90,8 @@ class VisualizationPanel(BasePanel):
             edges_for_drawing.append((from_state, input_sym, output_sym, to_state))
         
         # (ИЗМЕНЕНО) Передаем 'edges_for_drawing'
-        self.graph_canvas.draw_graph(edges_for_drawing, nodes, initial_state)
+        highlight = {
+            "nodes": getattr(self, '_highlight_nodes', set()),
+            "edges": getattr(self, '_highlight_edges', set())
+        }
+        self.graph_canvas.draw_graph(edges_for_drawing, nodes, initial_state, highlight=highlight)

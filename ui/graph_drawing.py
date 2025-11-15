@@ -11,6 +11,8 @@ class GraphCanvas:
         self.height = height
         self.node_positions = {}
         self.node_radius = 25
+        self.highlight_nodes: set[str] = set()
+        self.highlight_edges: set[tuple[str, str, str]] = set()
     
 
     def clear(self):
@@ -53,10 +55,13 @@ class GraphCanvas:
         r = self.node_radius
         
         label_text = f"{phi}, {psi}"
+        highlighted = (node1, phi, node2) in self.highlight_edges
 
         if node1 == node2:
             # === СПЕЦИАЛЬНАЯ ОБРАБОТКА ПЕТЛИ (A -> A) в запрошенном стиле ===
             loop_r = self.node_radius * 1.5
+            loop_color = "#9E9E9E" if highlighted else "#FF9800"
+            label_color = "#757575" if highlighted else "#FF9800"
             
             # Координаты центра узла
             x, y = x1, y1 
@@ -79,7 +84,7 @@ class GraphCanvas:
                 start=start_angle_deg, 
                 extent=extent_deg,
                 style=tk.ARC,
-                outline="#FF9800", # Оранжевый цвет для петли
+                outline=loop_color, # Оранжевый цвет для петли
                 width=2,
                 tags="edge"
             )
@@ -101,7 +106,7 @@ class GraphCanvas:
             self.canvas.create_line(
                 arc_x, arc_y,
                 entry_x, entry_y,
-                fill="#FF9800",
+                fill=loop_color,
                 width=2,
                 arrow=tk.LAST,
                 arrowshape=(12, 15, 5),
@@ -118,12 +123,14 @@ class GraphCanvas:
                 label_x, label_y,
                 text=f"({label_text})", # Оборачиваем метку в скобки
                 font=("Arial", 9, "bold"),
-                fill="#FF9800",
+                fill=label_color,
                 tags="edge_label"
             )
 
         else:
             # === ОБЫЧНОЕ НАПРАВЛЕННОЕ РЕБРО (A -> B) ===
+            line_color = "#9E9E9E" if highlighted else "#2196F3"
+            label_color = "#616161" if highlighted else "#1E88E5"
             
             dx = x2 - x1
             dy = y2 - y1
@@ -143,7 +150,7 @@ class GraphCanvas:
             # Рисуем линию (Здесь опция 'arrow' РАБОТАЕТ)
             self.canvas.create_line(
                 x_start, y_start, x_end, y_end,
-                fill="#2196F3",
+                fill=line_color,
                 width=2,
                 arrow=tk.LAST,
                 arrowshape=(12, 15, 5),
@@ -169,49 +176,59 @@ class GraphCanvas:
                 label_x, label_y,
                 text=f"({label_text})", # Оборачиваем метку в скобки
                 font=("Arial", 9, "bold"),
-                fill="#1E88E5",
+                fill=label_color,
                 tags="edge_label"
             )
     
     def draw_node(self, node, is_initial=False):
-        """Нарисовать узел"""
+        """Draw a single node with optional highlight."""
         if node not in self.node_positions:
             return
         
         x, y = self.node_positions[node]
         r = self.node_radius
+        highlighted = node in self.highlight_nodes
         
-        # Если это начальная вершина, рисуем двойной круг
+        # Highlight the initial state with a double circle
         if is_initial:
-            # Внешний круг (больший радиус)
+            outer_fill = "#CFD8DC" if highlighted else "#FFD54F"
+            outer_outline = "#616161" if highlighted else "#F57C00"
+            inner_fill = "#B0BEC5" if highlighted else "#FFF176"
+            inner_outline = "#616161" if highlighted else "#F57C00"
+            # Outer ring (slightly larger radius)
             self.canvas.create_oval(
                 x - r - 4, y - r - 4, x + r + 4, y + r + 4,
-                fill="#FFD54F",  # Золотистый цвет для начальной вершины
-                outline="#F57C00",  # Оранжевая граница
+                fill=outer_fill,  # outer color for initial node
+                outline=outer_outline,  # outline for initial node
                 width=3,
                 tags="node_outer"
             )
             
-            # Внутренний круг
+            # Inner fill
             self.canvas.create_oval(
                 x - r, y - r, x + r, y + r,
-                fill="#FFF176",  # Светло-желтый
-                outline="#F57C00",
+                fill=inner_fill,  # inner fill color
+                outline=inner_outline,
                 width=2,
                 tags="node"
             )
         else:
-            # Обычный узел
+            fill_color = "#B0BEC5" if highlighted else "#4CAF50"
+            outline_color = "#616161" if highlighted else "#2E7D32"
+            # Regular state
             self.canvas.create_oval(
                 x - r, y - r, x + r, y + r,
-                fill="#4CAF50",
-                outline="#2E7D32",
+                fill=fill_color,
+                outline=outline_color,
                 width=3,
                 tags="node"
             )
         
-        # Рисуем текст
-        text_color = "#333" if is_initial else "white"
+        # Draw label inside the circle
+        if highlighted:
+            text_color = "#212121"
+        else:
+            text_color = "#333" if is_initial else "white"
         self.canvas.create_text(
             x, y,
             text=str(node),
@@ -219,10 +236,15 @@ class GraphCanvas:
             fill=text_color,
             tags="node_text"
         )
-    
-    def draw_graph(self, edges, nodes, initial_state=None):
+
+    def draw_graph(self, edges, nodes, initial_state=None, highlight=None):
         """Нарисовать весь граф"""
         self.clear()
+
+        highlight = highlight or {}
+        self.highlight_nodes = set(highlight.get('nodes', []))
+        self.highlight_edges = set(highlight.get('edges', []))
+
         
         if not nodes:
             # Рисуем сообщение если граф пустой
