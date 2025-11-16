@@ -174,14 +174,14 @@ class AnalysisPanel(BasePanel):
             pady=4
         ).pack(side="left", expand=True, fill="x", padx=3)
 
-        self.live_status_label = tk.Label(
-            frame,
-            text="Live-Edit: ожидание запуска",
-            bg='#f0f0f0',
-            font=("Arial", 9),
-            anchor="w"
-        )
-        self.live_status_label.pack(fill="x", pady=(5, 0))
+        # self.live_status_label = tk.Label(
+        #     frame,
+        #     text="Live-Edit: ожидание запуска",
+        #     bg='#f0f0f0',
+        #     font=("Arial", 9),
+        #     anchor="w"
+        # )
+        # self.live_status_label.pack(fill="x", pady=(5, 0))
 
         tk.Label(
             frame,
@@ -333,7 +333,6 @@ class AnalysisPanel(BasePanel):
     def _reset_live(self):
         self.state_manager.reset_live_edit()
         self._clear_result_output()
-        self.live_status_label.config(text="Live-Edit: ожидание запуска")
         self._apply_word_entry_lock(None)
         self._update_word_highlight(None)
 
@@ -383,17 +382,17 @@ class AnalysisPanel(BasePanel):
 
     def _render_live_status(self, status: dict):
         history = status.get('history', [])
-        pointer = status.get('pointer', 0)
-        length = len(status.get('word', ""))
-        current_state = status.get('current_state', '∅')
-        last = status.get('last_step')
+        # pointer = status.get('pointer', 0)
+        # length = len(status.get('word', ""))
+        # current_state = status.get('current_state', '∅')
+        # last = status.get('last_step')
 
-        extra = ""
-        if last:
-            extra = f" | δ({last.current_state}, {last.input_symbol}) = {last.next_state} / {last.output_symbol}"
-        self.live_status_label.config(
-            text=f"w[{pointer}/{length}], q={current_state}{extra}"
-        )
+        # extra = ""
+        # if last:
+        #     extra = f" | δ({last.current_state}, {last.input_symbol}) = {last.next_state} / {last.output_symbol}"
+        # self.live_status_label.config(
+        #     text=f"w[{pointer}/{length}], q={current_state}{extra}"
+        # )
 
         output_chars = []
         for step in history:

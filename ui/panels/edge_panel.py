@@ -20,6 +20,9 @@ class EdgePanel(BasePanel):
             bg='#f0f0f0'
         )
         title.pack(pady=10)
+
+        # Undo/Redo перед формой добавления
+        self._create_history_controls(self)
         
         # Форма ввода
         self._create_input_form()
@@ -38,6 +41,7 @@ class EdgePanel(BasePanel):
             bg='#f0f0f0'
         )
         self.counter_label.pack(pady=5)
+        self._update_history_buttons()
     
     def _create_input_form(self):
         """Создать форму для ввода ребра"""
@@ -191,6 +195,39 @@ class EdgePanel(BasePanel):
             pady=3
         ).grid(row=0, column=2, padx=5)
 
+    def _create_history_controls(self, parent):
+        history_row = tk.Frame(parent, bg='#f0f0f0')
+        history_row.pack(fill="x", pady=(0, 10))
+
+        self.undo_button = tk.Button(
+            history_row,
+            text="Отменить",
+            command=self._handle_undo,
+            bg="#455A64",
+            fg='white',
+            font=("Arial", 9, "bold"),
+            cursor="hand2",
+            padx=10,
+            pady=5,
+            state=tk.DISABLED
+        )
+        self.undo_button.pack(side="left", expand=True, fill="x", padx=5)
+
+        self.redo_button = tk.Button(
+            history_row,
+            text="Вернуть",
+            command=self._handle_redo,
+            bg='#455A64',
+            fg='white',
+            font=("Arial", 9, "bold"),
+            cursor="hand2",
+            padx=10,
+            pady=5,
+            state=tk.DISABLED
+        )
+        self.redo_button.pack(side="left", expand=True, fill="x", padx=5)
+
+
     
     # === ОБРАБОТЧИКИ СОБЫТИЙ ===
     
@@ -241,6 +278,7 @@ class EdgePanel(BasePanel):
     def on_state_changed(self, event_type: str, data=None):
         """Обновить отображение при изменении состояния"""
         self._refresh_list()
+        self._update_history_buttons()
     
     def _refresh_list(self):
 
@@ -275,3 +313,22 @@ class EdgePanel(BasePanel):
             messagebox.showwarning("Ошибка", f"Состояние {state} не найдено.")
             return
         self.state_remove_entry.delete(0, tk.END)
+
+    def _handle_undo(self):
+        if self.state_manager.undo():
+            self._refresh_list()
+        self._update_history_buttons()
+
+    def _handle_redo(self):
+        if self.state_manager.redo():
+            self._refresh_list()
+        self._update_history_buttons()
+
+    def _update_history_buttons(self):
+        status = self.state_manager.get_history_status()
+        can_undo = bool(status.get('can_undo'))
+        can_redo = bool(status.get('can_redo'))
+        if hasattr(self, 'undo_button'):
+            self.undo_button.config(state=tk.NORMAL if can_undo else tk.DISABLED)
+        if hasattr(self, 'redo_button'):
+            self.redo_button.config(state=tk.NORMAL if can_redo else tk.DISABLED)
