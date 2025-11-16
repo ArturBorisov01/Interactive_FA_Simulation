@@ -124,6 +124,16 @@ class AnalysisPanel(BasePanel):
         
         self.word_entry = tk.Entry(frame, font=("Arial", 10))
         self.word_entry.pack(fill="x", pady=(0, 10))
+
+        self.word_pointer_label = tk.Label(
+            frame,
+            text="Word pointer: -",
+            bg='#f0f0f0',
+            font=("Arial", 9),
+            anchor="w",
+            fg='#333333'
+        )
+        self.word_pointer_label.pack(fill="x", pady=(0, 8))
         
         controls = tk.Frame(frame, bg='#f0f0f0')
         controls.pack(fill="x", pady=(0, 10))
@@ -324,6 +334,52 @@ class AnalysisPanel(BasePanel):
         self.state_manager.reset_live_edit()
         self._clear_result_output()
         self.live_status_label.config(text="Live-Edit: ожидание запуска")
+        self._apply_word_entry_lock(None)
+        self._update_word_highlight(None)
+
+    def _set_word_entry_state(self, locked: bool):
+        desired_state = 'disabled' if locked else 'normal'
+        if self.word_entry.cget('state') != desired_state:
+            self.word_entry.config(state=desired_state)
+
+    def _apply_word_entry_lock(self, status):
+        should_lock = False
+        if isinstance(status, dict):
+            word_has_value = bool(status.get('word'))
+            finished = bool(status.get('finished'))
+            should_lock = word_has_value and not finished
+        self._set_word_entry_state(should_lock)
+
+    def _update_word_highlight(self, status):
+        default_text = "Word pointer: -"
+        if not isinstance(status, dict):
+            self.word_pointer_label.config(text=default_text)
+            return
+
+        word = status.get('word') or ""
+        pointer = status.get('pointer') or 0
+        finished = bool(status.get('finished'))
+
+        if not word:
+            self.word_pointer_label.config(text=default_text)
+            return
+
+        length = len(word)
+        pointer = max(0, min(pointer, length))
+        highlight_index = length - 1 if pointer >= length else pointer
+        pointer_display = highlight_index + 1
+
+        decorated_chars = []
+        for index, char in enumerate(word):
+            if index == highlight_index:
+                decorated_chars.append(f"[{char}]")
+            else:
+                decorated_chars.append(char)
+
+        status_suffix = " - done" if finished and pointer >= length else ""
+        self.word_pointer_label.config(
+            text=f"{' '.join(decorated_chars)} | pos {pointer_display}/{length}{status_suffix}"
+        )
 
     def _render_live_status(self, status: dict):
         history = status.get('history', [])
@@ -354,6 +410,8 @@ class AnalysisPanel(BasePanel):
         self.result_text.delete(1.0, tk.END)
         self.result_text.insert(1.0, result_text)
         self.result_text.config(state='disabled')
+        self._apply_word_entry_lock(status)
+        self._update_word_highlight(status)
 
 
 
@@ -376,4 +434,13 @@ class AnalysisPanel(BasePanel):
             self.current_label.config(text=f"Текущее: q0 = {data}")
         elif event_type == 'cleared':
             self.current_label.config(text="Текущее: q0 не задано")
+            self._apply_word_entry_lock(None)
+            self._update_word_highlight(None)
+
+        if event_type in ('live_edit_started', 'live_edit_step') and isinstance(data, dict):
+            self._apply_word_entry_lock(data)
+            self._update_word_highlight(data)
+        elif event_type == 'live_edit_reset':
+            self._apply_word_entry_lock(None)
+            self._update_word_highlight(None)
 
